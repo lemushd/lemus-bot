@@ -5,7 +5,6 @@ require('dotenv').config();
 
 const TOKEN = process.env.DISCORD_TOKEN;
 const CHANNEL_ID = process.env.DAILY_CHANNEL_ID;
-const PURGE_CHANNEL_ID = process.env.PURGE_CHANNEL_ID;
 const COUNTER_FILE = 'daycount.json';
 const PREFIX = '!';
 const QURAN_API_URL = 'https://api.alquran.cloud/v1/ayah/random/editions/quran-uthmani,en.asad';
@@ -90,31 +89,6 @@ client.on('messageCreate', async (message) => {
 
   if (command === 'day') {
     message.channel.send(`✅Bot is online and today is Day ${dayData.day} <@${message.author.id}> إِنْ شَاءَ ٱللَّٰهُ `);
-  } else if (command === 'purge') {
-    try {
-      const targetChannel = client.channels.cache.get(PURGE_CHANNEL_ID);
-
-      if (!targetChannel || !targetChannel.isTextBased()) {
-        return await message.reply('⚠️ Target channel not found or not a text channel.');
-      }
-
-      const messages = await targetChannel.messages.fetch({ limit: 100 });
-      const deletable = messages.filter(m => Date.now() - m.createdTimestamp < 14 * 24 * 60 * 60 * 1000);
-
-      if (deletable.size === 0) {
-        return await message.reply('⚠️ No messages to delete (or they\'re all too old).');
-      }
-
-      await targetChannel.bulkDelete(deletable, true);
-      await message.reply(`✅ Deleted ${deletable.size} messages in <#${PURGE_CHANNEL_ID}>`);
-    } catch (err) {
-      console.error('❌ Purge command failed:', err);
-      try {
-        await message.reply('❌ An error occurred while purging. Check console for details.');
-      } catch (e) {
-        console.error('⚠️ Failed to send error reply:', e);
-      }
-    }
   } else if (command.startsWith('ping')) {
     const targetUser = message.mentions.users.first();
 
