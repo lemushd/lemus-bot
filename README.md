@@ -1,6 +1,6 @@
 # LemusBot
 
-A self-hosted Discord bot that posts a daily Quran verse in Arabic and English at 9:30 AM America/Los_Angeles.
+A self-hosted Discord bot that posts a daily Quran verse in Arabic and English at 3:00 PM America/Los_Angeles.
 
 ## Configuration
 

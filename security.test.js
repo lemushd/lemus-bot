@@ -35,7 +35,7 @@ test('commands cannot mass-mention, delete messages, or spam status', async () =
 });
 test('daily quote keeps schedule, blocks mentions, and respects message limit', async () => {
   const h = harness(); await h.job();
-  assert.equal(h.schedule.rule, '30 9 * * *');
+  assert.equal(h.schedule.rule, '0 15 * * *');
   assert.equal(h.schedule.opts.timezone, 'America/Los_Angeles');
   assert.equal(h.schedule.opts.noOverlap, true);
   assert.equal(h.sent[0].allowedMentions.parse.length, 0);

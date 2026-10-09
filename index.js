@@ -60,8 +60,8 @@ async function fetchDailyVerse() {
   };
 }
 
-// Scheduled message every day at 9:30 AM America/Los_Angeles (DST-aware).
-cron.schedule('30 9 * * *', async () => {
+// Scheduled message every day at 3:00 PM America/Los_Angeles (DST-aware).
+cron.schedule('0 15 * * *', async () => {
   const channel = client.channels.cache.get(CHANNEL_ID);
   if (!channel) return console.error('Channel not found!');
 
