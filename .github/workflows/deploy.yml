@@ -1,25 +1,22 @@
-name: Deploy LemusBot
-
+name: Check LemusBot
 on:
   push:
     branches: [main]
-
+  pull_request:
+permissions:
+  contents: read
 jobs:
-  deploy:
-    runs-on: [self-hosted, lemus-bot]
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
     steps:
-      - name: Pull latest code
-        run: |
-          cd /opt/discord-daily-bot
-          git pull origin main
-
-      - name: Install dependencies
-        run: |
-          cd /opt/discord-daily-bot
-          npm install --production
-
-      - name: Restart bot
-        run: sudo systemctl restart alfo-bot
-
-      - name: Verify bot is running
-        run: sleep 3 && sudo systemctl status alfo-bot --no-pager
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts
+      - run: node --check index.js
+      - run: npm test
+      - run: npm audit --omit=dev --audit-level=moderate

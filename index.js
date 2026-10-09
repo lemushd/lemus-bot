@@ -5,11 +5,12 @@ require('dotenv').config();
 
 const TOKEN = process.env.DISCORD_TOKEN;
 const CHANNEL_ID = process.env.DAILY_CHANNEL_ID;
-const COUNTER_FILE = 'daycount.json';
-const PREFIX = '!';
+const COUNTER_FILE = process.env.COUNTER_FILE || 'daycount.json';
+let lastCommandAt = 0;
 const QURAN_API_URL = 'https://api.alquran.cloud/v1/ayah/random/editions/quran-uthmani,en.asad';
 
 const client = new Client({
+  allowedMentions: { parse: [], repliedUser: false },
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
 });
 
@@ -64,6 +65,7 @@ cron.schedule('30 9 * * *', async () => {
   const channel = client.channels.cache.get(CHANNEL_ID);
   if (!channel) return console.error('Channel not found!');
 
+  try {
   let messageText = 'Quran verse of the day is unavailable right now.    إِنْ شَاءَ ٱللَّٰهُ';
 
   try {
@@ -73,34 +75,29 @@ cron.schedule('30 9 * * *', async () => {
     console.error('Failed to fetch Quran verse:', err);
   }
 
-  await channel.send({ content: messageText, allowedMentions: { parse: [] } });
+  await channel.send({ content: messageText.length > 2000 ? messageText.slice(0, 1999) + "…" : messageText, allowedMentions: { parse: [] } });
   dayData.day += 1;
   fs.writeFileSync(COUNTER_FILE, JSON.stringify(dayData));
+  } catch (err) { console.error("Daily message failed:", err.message); }
 }, {
+  noOverlap: true,
   timezone: "America/Los_Angeles"
 });
 
-// Command handler
+// Only accept the status command in the configured community channel.
 client.on('messageCreate', async (message) => {
-  if (message.author.bot) return;
-  if (!message.content.startsWith(PREFIX)) return;
-
-  const command = message.content.slice(PREFIX.length).trim().toLowerCase();
-
-  if (command === 'day') {
-    message.channel.send(`✅Bot is online and today is Day ${dayData.day} <@${message.author.id}> إِنْ شَاءَ ٱللَّٰهُ `);
-  } else if (command.startsWith('ping')) {
-    const targetUser = message.mentions.users.first();
-
-    if (!targetUser) {
-      return message.reply('⚠️ You need to mention a user to ping them!');
-    }
-
-    for (let i = 0; i < 5; i++) {
-      setTimeout(() => {
-        message.channel.send(`<@${targetUser.id}>`);
-      }, i * 500);
-    }
+  if (message.author.bot || !message.guildId || message.channelId !== CHANNEL_ID) return;
+  if (message.content.trim().toLowerCase() !== '!day') return;
+  const now = Date.now();
+  if (now - lastCommandAt < 30000) return;
+  lastCommandAt = now;
+  try {
+    await message.channel.send({
+      content: `Bot is online and today is Day ${dayData.day}.`,
+      allowedMentions: { parse: [] },
+    });
+  } catch (err) {
+    console.error('Status reply failed:', err.message);
   }
 });
 
