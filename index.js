@@ -6,9 +6,9 @@ require('dotenv').config();
 const TOKEN = process.env.DISCORD_TOKEN;
 const CHANNEL_ID = process.env.DAILY_CHANNEL_ID;
 const PURGE_CHANNEL_ID = process.env.PURGE_CHANNEL_ID;
-const WISH_USER_ID = process.env.WISH_USER_ID;
 const COUNTER_FILE = 'daycount.json';
 const PREFIX = '!';
+const QURAN_API_URL = 'https://api.alquran.cloud/v1/ayah/random/editions/quran-uthmani,en.asad';
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
@@ -36,12 +36,45 @@ client.once('ready', () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 });
 
-// Scheduled message every day at 10:11 AM PST/PDT
-cron.schedule('11 18 * * *', () => {
+async function fetchDailyVerse() {
+  const response = await fetch(QURAN_API_URL, {
+    signal: AbortSignal.timeout(10000),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Quran API request failed with status ${response.status}`);
+  }
+
+  const payload = await response.json();
+  if (!Array.isArray(payload?.data) || payload.data.length < 2) {
+    throw new Error('Quran API response did not include both verse editions');
+  }
+
+  const [arabicVerse, englishVerse] = payload.data;
+  const reference = `${englishVerse.surah.englishName} ${englishVerse.surah.number}:${englishVerse.numberInSurah}`;
+
+  return {
+    reference,
+    arabicText: arabicVerse.text.replace(/\s+/g, ' ').trim(),
+    englishText: englishVerse.text.replace(/\s+/g, ' ').trim(),
+  };
+}
+
+// Scheduled message every day at 9:30 AM America/Los_Angeles (DST-aware).
+cron.schedule('30 9 * * *', async () => {
   const channel = client.channels.cache.get(CHANNEL_ID);
   if (!channel) return console.error('Channel not found!');
 
-  channel.send(`9:11 Make a wish!! <@${WISH_USER_ID}> Go workout you fat fuck!    إِنْ شَاءَ ٱللَّٰهُ`);
+  let messageText = 'Quran verse of the day is unavailable right now.    إِنْ شَاءَ ٱللَّٰهُ';
+
+  try {
+    const verse = await fetchDailyVerse();
+    messageText = `Quran verse of the day (${verse.reference})\n${verse.arabicText}\n${verse.englishText}    إِنْ شَاءَ ٱللَّٰهُ`;
+  } catch (err) {
+    console.error('Failed to fetch Quran verse:', err);
+  }
+
+  await channel.send({ content: messageText, allowedMentions: { parse: [] } });
   dayData.day += 1;
   fs.writeFileSync(COUNTER_FILE, JSON.stringify(dayData));
 }, {
